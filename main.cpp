@@ -3,8 +3,23 @@
 #include <math.h>
 #include <vector>
 
+#include "Particle.h"
 #include "vmath.h"
 #include "Camera.h"
+
+void init();
+void update(float dt);
+void updateCamera(float dt);
+void reshapeFunc(int width, int height);
+
+void onMouseMove(int mouseX, int mouseY);
+void onPassiveMouseMove(int mouseX, int mouseY);
+void onMouseFunc(int button, int state, int x, int y);
+void onMouseScroll(float dx);
+
+void displayFunc();
+void idleFunc();
+void exit();
 
 Camera cam;
 vmath::vec2 mousePos;
@@ -12,11 +27,9 @@ float phi = 0.0f;
 float theta = 0.0f;
 float rho = 20.0f;
 
-int currentTime = 1;
-float fps = 30.0;
-int maxTime = 1200;
+int previousTime = 0;
 
-std::vector<vmath::vec3> vertices;
+std::vector<Particle> particles;
 std::vector<unsigned int> indices;
 vmath::vec4 matAmbient;
 vmath::vec4 matDiffuse;
@@ -25,17 +38,6 @@ vmath::vec4 matSpecular;
 vmath::vec4 lightAmbient;
 vmath::vec4 lightDiffuse;
 vmath::vec4 lightSpecular;
-
-//GLvoid Timer(int value);
-void displayFunc();
-void init();
-void updateCamera();
-void reshapeFunc(int width, int height);
-void onMouseMove(int mouseX, int mouseY);
-void onMouseScroll(float dx);
-void onPassiveMouseMove(int mouseX, int mouseY);
-void onMouseFunc(int button, int state, int x, int y);
-void exit();
 
 int main(int argc, char** argv)
 {
@@ -61,6 +63,8 @@ int main(int argc, char** argv)
 
 	glutDisplayFunc(displayFunc);
 	glutReshapeFunc(reshapeFunc);
+	glutIdleFunc(idleFunc);
+	previousTime = glutGet(GLUT_ELAPSED_TIME);
 
 	init();
 
@@ -78,7 +82,8 @@ void init()
 	{
 		for (int j = 0; j < gridSize; j++)
 		{
-			vertices.push_back(vmath::vec3(static_cast<float>(i - 5), static_cast<float>(j - 5), 0.0f));
+			Particle particle = Particle(vmath::vec3(static_cast<float>(i - 5), 0.0f, static_cast<float>(j - 5)));
+			particles.push_back(particle);
 		}
 	}
 
@@ -111,22 +116,54 @@ void init()
 	// Init view
 	theta = 1.57f;
 	phi = 1.4f;
-	updateCamera();
+	updateCamera(0.016f);
 }
 
 
-//GLvoid Timer(int value)
-//{
-//	currentTime++;
-//	currentTime %= maxTime;
-//	//app.update();
-//	if (value)
-//		glutPostRedisplay();
-//	glutTimerFunc(static_cast<int>(1200 / fps), Timer, value);
-//}
+void update(float dt)
+{
+	updateCamera(dt);
+
+	// Calculate spring forces
+	for (unsigned int i = 0; i < particles.size(); i++)
+	{
+		Particle* p1 = &particles[i];
+		for (unsigned int j = i + 1; j < particles.size(); j++)
+		{
+			Particle* p2 = &particles[j];
+
+			// Calculate distance between the two particles
+			vmath::vec3 dist = p2->pos - p1->pos;
+			float length = vmath::length(dist);
+			// Normalize the distance for direciton
+			vmath::vec3 nDist = vmath::normalize(dist);
+
+			// Get the velocity along the direction
+			float v1 = vmath::dot(p1->velocity, nDist);
+			float v2 = vmath::dot(p2->velocity, nDist);
+
+			// Calculate the force of the spring
+			// -ks * (restingLength - actualLength) - kd * (v1 - v2)
+			float fSD = -1.0f * (1.0f - length) - 0.5f * (v1 - v2);
+			vmath::vec3 force = fSD * nDist;
+
+			particles[i].applyForce(force);
+			particles[j].applyForce(-force);
+		}
+	}
+
+	// Integrate the particles
+	for (unsigned int i = 0; i < particles.size(); i++)
+	{
+		// Apply gravity
+		particles[i].applyForce(vmath::vec3(0.0f, -1.0f, 0.0f));
+
+		particles[i].integrate(dt);
+	}
+}
 
 // Update the camera position
-void updateCamera()
+void updateCamera(float dt)
 {
 	// Clamp
 	if (phi > 3.14f)
@@ -140,7 +177,7 @@ void updateCamera()
 	float z = rho * sin(phi) * sin(theta);
 
 	// Should prob use a slerp here but ohwell
-	cam.setEyePos(vmath::lerp(cam.eyePos, vmath::vec3(x, y, z), 0.3f));
+	cam.setEyePos(vmath::lerp(cam.eyePos, vmath::vec3(x, y, z), dt * 12.0f));
 	cam.setFocalPt(0.0f, 0.0f, 0.0f);
 }
 
@@ -177,6 +214,7 @@ void onMouseFunc(int button, int state, int x, int y)
 		onMouseScroll(-1.0f);
 	else if (button == 4)
 		onMouseScroll(1.0f);
+	idleFunc();
 }
 
 // Called from onMouseFunc to handle scrolling
@@ -189,8 +227,6 @@ void onMouseScroll(float dx)
 // Forward the callbacks to the class
 void displayFunc()
 {
-	updateCamera();
-
 	glClearColor(0.4f, 0.6f, 0.9f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -226,12 +262,22 @@ void displayFunc()
 	glBegin(GL_TRIANGLE_STRIP);
 	for (int i = 0; i < indices.size(); i++)
 	{
-		vmath::vec3 vertex = vertices[indices[i]];
+		vmath::vec3 vertex = particles[indices[i]].pos;
 		glVertex3f(vertex[0], vertex[1], vertex[2]);
 	}
 	glEnd();
 
 	glutSwapBuffers();
+	glutPostRedisplay();
+}
+
+void idleFunc()
+{
+	int t = glutGet(GLUT_ELAPSED_TIME);
+	float dt = static_cast<float>(t - previousTime) / 1000.0f;
+	previousTime = t;
+	//printf("Dt: %f\n", dt);
+	update(dt);
 	glutPostRedisplay();
 }
 
