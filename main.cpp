@@ -115,8 +115,8 @@ void init()
 	}
 
 	// Set the planes material
-	matAmbient = vmath::vec4(0.5f, 0.5f, 0.5f, 1.0f);
-	matDiffuse = vmath::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+	matAmbient = vmath::vec4(0.5f, 0.3f, 0.3f, 1.0f);
+	matDiffuse = vmath::vec4(0.5f, 0.3f, 0.3f, 1.0f);
 	matSpecular = vmath::vec4(0.0f, 0.0f, 0.0f, 0.5f);
 
 	// Setup the directional light
