@@ -18,9 +18,12 @@ public:
 public:
 	void integrate(float dt)
 	{
-		integrateAccel(dt);
-		integrateVelocity(dt);
-		force = vmath::vec3(0.0f);
+		if (!isFixed)
+		{
+			integrateAccel(dt);
+			integrateVelocity(dt);
+			force = vmath::vec3(0.0f);
+		}
 	}
 
 	void integrateAccel(float dt)
@@ -35,12 +38,11 @@ public:
 
 	void applyForce(vmath::vec3 force)
 	{
-		if (isForceApplied)
-			Particle::force += force;
+		Particle::force += force;
 	}
 
 public:
-	bool isForceApplied = true;
+	bool isFixed = false;
 	vmath::vec3 pos = vmath::vec3(0.0f);
 	vmath::vec3 force = vmath::vec3(0.0f);
 	vmath::vec3 velocity = vmath::vec3(0.0f);

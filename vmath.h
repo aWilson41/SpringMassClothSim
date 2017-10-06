@@ -832,4 +832,19 @@ static inline vec3 catmullRom(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t)
 		(2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t2 +
 		(-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3);
 }
+
+class Point2D
+{
+public:
+	Point2D() { }
+	Point2D(int x, int y)
+	{
+		Point2D::x = x;
+		Point2D::y = y;
+	}
+
+public:
+	int x = 0;
+	int y = 0;
+};
 };

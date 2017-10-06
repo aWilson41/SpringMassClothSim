@@ -8,7 +8,7 @@ public:
 	Particle* p1 = nullptr;
 	Particle* p2 = nullptr;
 	float ks = 20.0f;
-	float kd = 1.5f;
+	float kd = 1.0f;
 	float restingLength = 1.0f;
 
 public:
@@ -21,12 +21,12 @@ public:
 	{
 		Spring::p1 = p1;
 		Spring::p2 = p2;
-		restDist = restingLength;
+		restingLength = restDist;
 	}
 
 	void applySpringForce()
 	{
-		if (p1 != nullptr && p2 != nullptr)
+		//if (p1 != nullptr && p2 != nullptr)
 		{
 			// Calculate distance between the two particles
 			vmath::vec3 dist = p2->pos - p1->pos;

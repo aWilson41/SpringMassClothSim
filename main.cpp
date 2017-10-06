@@ -9,7 +9,7 @@
 #include "Camera.h"
 
 void init();
-void generateSprings(int gridSize);
+void generateSprings(int gridSize, float dist);
 void update(float dt);
 void updateCamera(float dt);
 void reshapeFunc(int width, int height);
@@ -83,27 +83,38 @@ int main(int argc, char** argv)
 // Initializaiton code
 void init()
 {
-	int gridSize = 15;
+	int gridSize = 25;
+	float halfSize = gridSize * 0.5f;
+	particles.resize(gridSize * gridSize);
+	int index = 0;
+	float density = 0.5f;
 	// Generate a triangle plane for drawing
 	for (int i = 0; i < gridSize; i++)
 	{
 		for (int j = 0; j < gridSize; j++)
 		{
-			Particle particle = Particle(vmath::vec3(static_cast<float>(i - 5), 10.0f, static_cast<float>(j - 5)));
-			particles.push_back(particle);
+			particles[index++] = Particle(vmath::vec3((static_cast<float>(i) - halfSize) * density, 2.0f, (static_cast<float>(j) - halfSize)* density));
 		}
 	}
 
 	// Two corners are fixed
-	particles[0].isForceApplied = false;
-	particles[gridSize - 1].isForceApplied = false;
+	particles[0].isFixed = true;
+	particles[gridSize - 1].isFixed = true;
+	// Fix the first row
+	/*for (int i = 0; i < gridSize; i++)
+	{
+		particles[i].isForceApplied = false;
+	}*/
+	// Last two corners are fixed
+	particles[gridSize * gridSize - 1].isFixed = true;
+	particles[gridSize * gridSize - gridSize].isFixed = true;
 
-	generateSprings(gridSize);
+	generateSprings(gridSize, density);
 
 	// Setup indices
 	// Every triangle is drawn independently (overlap)
 	indices.resize(6 * gridSize * gridSize);
-	int index = 0;
+	index = 0;
 	for (unsigned int i = 0; i < gridSize - 1; i++)
 	{
 		for (unsigned int j = 0; j < gridSize - 1; j++)
@@ -143,50 +154,78 @@ void init()
 	updateCamera(0.016f);
 }
 
-void generateSprings(int gridSize)
+void generateSprings(int gridSize, float dist)
 {
 	//We use this index to iterate through the list of springs
 	int index = 0;
-	float dist = 1.0f;
 	float diagDist = sqrt(pow(dist, 2) + pow(dist, 2));
 
-	// There are 3 springs per triangle and 2 triangles per voxel and (gridSize - 1) * (gridSize - 1) voxels
-	int numVoxels = gridSize - 1;
-	springs.resize(6 * numVoxels * numVoxels);
+	// There are 4 springs per voxel
+	int numQuads = gridSize - 1;
+	//springs.resize(numQuads * (numQuads * 4 + 2));
 
-	// Iterate through each Particle to create our springs
-	for (int i = 0; i < gridSize; i++)
+	for (unsigned int i = 0; i < numQuads; i++)
 	{
-		for (int j = 0; j < gridSize; j++)
+		for (unsigned int j = 0; j < numQuads; j++)
 		{
-			// Right border and not top
-			if (i == gridSize - 1 && j < gridSize - 1)
-				springs[index++] = Spring(&particles[i * gridSize + j], &particles[i * gridSize + j + 1], dist);
-			// At the top of the cloth
-			else if (j == 0)
-			{
-				springs[index++] = Spring(&particles[i * gridSize + j], &particles[(i + 1) * gridSize + j], dist);
-				springs[index++] = Spring(&particles[i * gridSize + j], &particles[i * gridSize + j + 1], dist);
-			}
-			// Between the top and down broders of the cloth
-			else if (j < gridSize - 1)
-			{
-				springs[index++] = Spring(&particles[i * gridSize + j], &particles[(i + 1) * gridSize + j - 1], diagDist);
-				springs[index++] = Spring(&particles[i * gridSize + j - 1], &particles[(i + 1) * gridSize + j], diagDist);
-				springs[index++] = Spring(&particles[i * gridSize + j], &particles[(i + 1) * gridSize + j], dist);
-				springs[index++] = Spring(&particles[i * gridSize + j], &particles[i * gridSize + j + 1], dist);
-			}
-			else if (i == gridSize - 1 && j == gridSize - 1)
-				continue;
-			// At the bottom of the cloth
-			else
-			{
-				springs[index++] = Spring(&particles[i * gridSize + j], &particles[(i + 1) * gridSize + j - 1], diagDist);
-				springs[index++] = Spring(&particles[i * gridSize + j], &particles[(i + 1) * gridSize + j], dist);
-				springs[index++] = Spring(&particles[i * gridSize + j - 1], &particles[(i + 1) * gridSize + j], dist);
-			}
+			int topLeftIndex = i * gridSize + j;
+			int topRightIndex = (i + 1) * gridSize + j;
+			int bottomLeftIndex = i * gridSize + j + 1;
+			int bottomRightIndex = (i + 1) * gridSize + j + 1;
+			springs.push_back(Spring(&particles[topLeftIndex], &particles[topRightIndex], dist));
+			springs.push_back(Spring(&particles[topLeftIndex], &particles[bottomLeftIndex], dist));
+			springs.push_back(Spring(&particles[topRightIndex], &particles[bottomLeftIndex], diagDist));
+			springs.push_back(Spring(&particles[topLeftIndex], &particles[bottomRightIndex], diagDist));
 		}
 	}
+	// Then fill in the missing few triangles
+	for (unsigned int i = numQuads; i < gridSize * numQuads; i += gridSize)
+	{
+		springs.push_back(Spring(&particles[i], &particles[i + gridSize], dist));
+		/*springs.back().p1->isForceApplied = false;
+		springs.back().p2->isForceApplied = false;*/
+	}
+	for (unsigned int j = numQuads * gridSize; j < numQuads * gridSize + numQuads; j++)
+	{
+		springs.push_back(Spring(&particles[j], &particles[j + 1], dist));
+	}
+
+	//int numQuads = gridSize - 1;
+	//springs.resize(6 * numQuads * numQuads);
+
+	//// Iterate through each Particle to create our springs
+	//for (int i = 0; i < gridSize; i++)
+	//{
+	//	for (int j = 0; j < gridSize; j++)
+	//	{
+	//		// Right border and not top
+	//		if (i == gridSize - 1 && j < gridSize - 1)
+	//			springs[index++] = Spring(&particles[i * gridSize + j], &particles[i * gridSize + j + 1], dist);
+	//		// At the top of the cloth
+	//		else if (j == 0)
+	//		{
+	//			springs[index++] = Spring(&particles[i * gridSize + j], &particles[(i + 1) * gridSize + j], dist);
+	//			springs[index++] = Spring(&particles[i * gridSize + j], &particles[i * gridSize + j + 1], dist);
+	//		}
+	//		// Between the top and down broders of the cloth
+	//		else if (j < gridSize - 1)
+	//		{
+	//			springs[index++] = Spring(&particles[i * gridSize + j], &particles[(i + 1) * gridSize + j - 1], diagDist);
+	//			springs[index++] = Spring(&particles[i * gridSize + j - 1], &particles[(i + 1) * gridSize + j], diagDist);
+	//			springs[index++] = Spring(&particles[i * gridSize + j], &particles[(i + 1) * gridSize + j], dist);
+	//			springs[index++] = Spring(&particles[i * gridSize + j], &particles[i * gridSize + j + 1], dist);
+	//		}
+	//		else if (i == gridSize - 1 && j == gridSize - 1)
+	//			continue;
+	//		// At the bottom of the cloth
+	//		else
+	//		{
+	//			springs[index++] = Spring(&particles[i * gridSize + j], &particles[(i + 1) * gridSize + j - 1], diagDist);
+	//			springs[index++] = Spring(&particles[i * gridSize + j], &particles[(i + 1) * gridSize + j], dist);
+	//			springs[index++] = Spring(&particles[i * gridSize + j - 1], &particles[(i + 1) * gridSize + j], dist);
+	//		}
+	//	}
+	//}
 }
 
 
@@ -281,16 +320,16 @@ void displayFunc()
 	// Set the draw information and lightss
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 	//glPointSize(6.0f); // Just the triangle points
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glLineWidth(2.0f); // For wireframe triangles
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // For filled triangles
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glLineWidth(2.0f); // For wireframe triangles
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // For filled triangles
 	glFrontFace(GL_CCW);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, &lightAmbient[0]);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, &lightDiffuse[0]);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, &lightSpecular[0]);
-	glLightfv(GL_LIGHT0, GL_POSITION, vmath::normalize(vmath::vec4(1.0f, 0.0f, 0.0f, 0.0f)));
+	glLightfv(GL_LIGHT0, GL_POSITION, vmath::normalize(vmath::vec4(1.0f, 1.0f, 0.0f, 0.0f)));
 	glShadeModel(GL_FLAT);
 
 	// Begin drawing
@@ -324,8 +363,22 @@ void displayFunc()
 	}
 	glEnd();
 
+	//glDisable(GL_LIGHTING);
+	//glColor3f(1.0f, 0.0f, 0.0f);
+	//// Draw the particles
+	//glBegin(GL_LINES);
+	//for (unsigned int i = 0; i < springs.size(); i++)
+	//{
+	//	vmath::vec3 v1 = springs[i].p1->pos;
+	//	vmath::vec3 v2 = springs[i].p2->pos;
+	//	glVertex3f(v1[0], v1[1], v1[2]);
+	//	glVertex3f(v2[0], v2[1], v2[2]);
+	//}
+	//glEnd();
+
+	//glEnable(GL_LIGHTING);
 	// Draw ground plane
-	glMaterialfv(GL_FRONT, GL_AMBIENT, &planeMatAmbient[0]);
+	/*glMaterialfv(GL_FRONT, GL_AMBIENT, &planeMatAmbient[0]);
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, &planeMatDiffuse[0]);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, &planeMatSpecular[0]);
 	glMaterialf(GL_FRONT, GL_SHININESS, planeMatSpecular[3]);
@@ -334,7 +387,7 @@ void displayFunc()
 	glVertex3f(15.0f, -10.0f, 15.0f);
 	glVertex3f(-15.0f, -10.0f, 15.0f);
 	glVertex3f(-15.0f, -10.0f, -15.0f);
-	glEnd();
+	glEnd();*/
 
 	glutSwapBuffers();
 	glutPostRedisplay();
