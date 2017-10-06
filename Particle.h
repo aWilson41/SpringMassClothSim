@@ -35,10 +35,12 @@ public:
 
 	void applyForce(vmath::vec3 force)
 	{
-		Particle::force += force;
+		if (isForceApplied)
+			Particle::force += force;
 	}
 
 public:
+	bool isForceApplied = true;
 	vmath::vec3 pos = vmath::vec3(0.0f);
 	vmath::vec3 force = vmath::vec3(0.0f);
 	vmath::vec3 velocity = vmath::vec3(0.0f);
