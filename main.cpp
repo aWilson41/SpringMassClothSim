@@ -27,7 +27,7 @@ Camera cam;
 vmath::vec2 mousePos;
 float phi = 0.0f;
 float theta = 0.0f;
-float rho = 20.0f;
+float rho = 30.0f;
 
 int previousTime = 0;
 
@@ -37,6 +37,10 @@ std::vector<unsigned int> indices;
 vmath::vec4 matAmbient;
 vmath::vec4 matDiffuse;
 vmath::vec4 matSpecular;
+
+vmath::vec4 planeMatAmbient;
+vmath::vec4 planeMatDiffuse;
+vmath::vec4 planeMatSpecular;
 
 vmath::vec4 lightAmbient;
 vmath::vec4 lightDiffuse;
@@ -85,7 +89,7 @@ void init()
 	{
 		for (int j = 0; j < gridSize; j++)
 		{
-			Particle particle = Particle(vmath::vec3(static_cast<float>(i - 5), 5.0f, static_cast<float>(j - 5)));
+			Particle particle = Particle(vmath::vec3(static_cast<float>(i - 5), 10.0f, static_cast<float>(j - 5)));
 			particles.push_back(particle);
 		}
 	}
@@ -114,10 +118,15 @@ void init()
 		}
 	}
 
-	// Set the planes material
+	// Set the cloths material
 	matAmbient = vmath::vec4(0.5f, 0.3f, 0.3f, 1.0f);
 	matDiffuse = vmath::vec4(0.5f, 0.3f, 0.3f, 1.0f);
 	matSpecular = vmath::vec4(0.0f, 0.0f, 0.0f, 0.5f);
+
+	// Set the ground planes material
+	planeMatAmbient = vmath::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+	planeMatDiffuse = vmath::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+	planeMatSpecular = vmath::vec4(0.0f, 0.0f, 0.0f, 0.5f);
 
 	// Setup the directional light
 	lightAmbient = vmath::vec4(0.5f, 0.5f, 0.5f, 1.0f);
@@ -272,9 +281,9 @@ void displayFunc()
 	// Set the draw information and lightss
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 	//glPointSize(6.0f); // Just the triangle points
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//glLineWidth(2.0f); // For wireframe triangles
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // For filled triangles
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glLineWidth(2.0f); // For wireframe triangles
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // For filled triangles
 	glFrontFace(GL_CCW);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
@@ -288,11 +297,11 @@ void displayFunc()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(cam.fov, cam.aspectRatio, cam.nearZ, cam.farZ);
-
-	// Draw the plane
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glMultMatrixf(cam.view[0]);
+
+	// Draw the cloth
 	// Set the material to use
 	glMaterialfv(GL_FRONT, GL_AMBIENT, &matAmbient[0]);
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, &matDiffuse[0]);
@@ -313,6 +322,18 @@ void displayFunc()
 		glVertex3f(vertex3[0], vertex3[1], vertex3[2]);
 		glNormal3f(normal[0], normal[1], normal[2]);
 	}
+	glEnd();
+
+	// Draw ground plane
+	glMaterialfv(GL_FRONT, GL_AMBIENT, &planeMatAmbient[0]);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, &planeMatDiffuse[0]);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, &planeMatSpecular[0]);
+	glMaterialf(GL_FRONT, GL_SHININESS, planeMatSpecular[3]);
+	glBegin(GL_QUADS);
+	glVertex3f(15.0f, -10.0f, -15.0f);
+	glVertex3f(15.0f, -10.0f, 15.0f);
+	glVertex3f(-15.0f, -10.0f, 15.0f);
+	glVertex3f(-15.0f, -10.0f, -15.0f);
 	glEnd();
 
 	glutSwapBuffers();
