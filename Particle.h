@@ -44,6 +44,7 @@ public:
 public:
 	bool isFixed = false;
 	vmath::vec3 pos = vmath::vec3(0.0f);
+	vmath::vec3 normal = vmath::vec3(0.0f);
 	vmath::vec3 force = vmath::vec3(0.0f);
 	vmath::vec3 velocity = vmath::vec3(0.0f);
 };

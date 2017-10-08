@@ -7,8 +7,8 @@ class Spring
 public:
 	Particle* p1 = nullptr;
 	Particle* p2 = nullptr;
-	float ks = 20.0f;
-	float kd = 1.0f;
+	float ks = 40.0f;
+	float kd = 0.8f;
 	float restingLength = 1.0f;
 
 public:
