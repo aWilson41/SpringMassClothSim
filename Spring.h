@@ -8,7 +8,7 @@ public:
 	Particle* p1 = nullptr;
 	Particle* p2 = nullptr;
 	float ks = 40.0f;
-	float kd = 0.8f;
+	float kd = 0.5f;
 	float restingLength = 1.0f;
 
 public:

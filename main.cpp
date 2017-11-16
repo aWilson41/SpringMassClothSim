@@ -35,10 +35,17 @@ float rho = 30.0f;
 int previousTime = 0;
 int shadeMode = 0;
 
+vmath::vec3 spherePos;
+float radius = 2.0f;
+
+vmath::vec4 sphereMatAmbient;
+vmath::vec4 sphereMatDiffuse;
+vmath::vec4 sphereMatSpecular;
+
 std::vector<Particle> particles;
 std::vector<Spring> springs;
 std::vector<unsigned int> indices;
-unsigned int gridSize = 31;
+unsigned int gridSize = 41;
 vmath::vec4 matAmbient;
 vmath::vec4 matDiffuse;
 vmath::vec4 matSpecular;
@@ -99,6 +106,11 @@ void init()
 	planeMatDiffuse = vmath::vec4(0.5f, 0.5f, 0.5f, 1.0f);
 	planeMatSpecular = vmath::vec4(0.0f, 0.0f, 0.0f, 0.5f);
 
+	// Set the spheres material
+	sphereMatAmbient = vmath::vec4(0.3f, 0.3f, 0.6f, 1.0f);
+	sphereMatDiffuse = vmath::vec4(0.1f, 0.1f, 0.8f, 1.0f);
+	sphereMatSpecular = vmath::vec4(0.0f, 0.0f, 0.0f, 0.5f);
+
 	// Setup the directional light
 	lightAmbient = vmath::vec4(0.5f, 0.5f, 0.5f, 1.0f);
 	lightDiffuse = vmath::vec4(0.5f, 0.5f, 0.5f, 1.0f);
@@ -120,7 +132,7 @@ void generateClothPlane()
 	float halfSize = gridSize * 0.5f;
 	particles.resize(gridSize * gridSize);
 	int index = 0;
-	float density = 0.5f;
+	float density = 0.4f;
 	// Generate a triangle plane for drawing
 	for (unsigned int i = 0; i < gridSize; i++)
 	{
@@ -254,6 +266,27 @@ void update(float dt)
 		springs[i].applySpringForce();
 	}
 
+	// Particle collision with sphere (Could do triangles instead)
+	for (unsigned int i = 0; i < particles.size(); i++)
+	{
+		// Distance between particle and sphere
+		vmath::vec3 dist = particles[i].pos - spherePos;
+		// If the distance is less than the radius of the sphere then they're touching
+		if (vmath::length(dist) < (radius + 0.2))
+		{
+			// Collision resolution
+			vmath::vec3 dir = vmath::normalize(dist);
+			vmath::vec3 pos = dir * (radius + 0.2) + spherePos;
+			particles[i].pos = pos;
+
+			// Handle velocity (completely inelastic)
+			// Remove velocity pointing into the sphere
+			float l = vmath::dot(dir, particles[i].velocity);
+			if (l < 0.01)
+				particles[i].velocity = particles[i].velocity - (l * dir);
+		}
+	}
+
 	// Integrate the particles
 	for (unsigned int i = 0; i < particles.size(); i++)
 	{
@@ -334,6 +367,12 @@ void onKeyPress(unsigned char key, int x, int y)
 		if (shadeMode > 3)
 			shadeMode = 0;
 		break;
+	case'l':
+		spherePos[0] += 0.1f;
+		break;
+	case'j':
+		spherePos[0] -= 0.1f;
+		break;
 	case 27:
 		exit(0);
 		break;
@@ -369,7 +408,8 @@ void displayFunc()
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, &lightDiffuse[0]);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, &lightSpecular[0]);
 	glLightfv(GL_LIGHT0, GL_POSITION, vmath::normalize(vmath::vec4(0.0f, 15.0f, 0.0f, 1.0f)));
-	glShadeModel(GL_FLAT);
+	//glShadeModel(GL_FLAT);
+	glShadeModel(GL_SMOOTH);
 
 	// Begin drawing
 	glMatrixMode(GL_PROJECTION);
@@ -402,6 +442,13 @@ void displayFunc()
 		//glNormal3f(normal[0], normal[1], normal[2]);
 	}
 	glEnd();
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, &sphereMatAmbient[0]);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, &sphereMatDiffuse[0]);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, &sphereMatSpecular[0]);
+	glMaterialf(GL_FRONT, GL_SHININESS, sphereMatSpecular[3]);
+	glTranslatef(spherePos[0], spherePos[1], spherePos[2]);
+	glutSolidSphere(radius, 20, 20);
 
 	// Draw the springs
 	//glDisable(GL_LIGHTING);
