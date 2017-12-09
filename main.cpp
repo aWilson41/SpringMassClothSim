@@ -1,17 +1,16 @@
-#include <GL\freeglut.h>
-#include <GL\GLU.h>
-#include <math.h>
-#include <vector>
-
 #include "Spring.h"
 #include "Particle.h"
 #include "vmath.h"
 #include "Camera.h"
 
+#include <GL\freeglut.h>
+#include <GL\GLU.h>
+#include <math.h>
+#include <vector>
+
 void init();
 void generateClothPlane();
 void generateSprings(float dist);
-void calculateNormals();
 void update(float dt);
 void updateCamera(float dt);
 void reshapeFunc(int width, int height);
@@ -94,6 +93,7 @@ int main(int argc, char** argv)
 // Initializaiton code
 void init()
 {
+	// Generate the intial cloth particles
 	generateClothPlane();
 
 	// Set the cloths material
@@ -223,38 +223,6 @@ void generateSprings(float dist)
 		springs.push_back(Spring(&particles[j], &particles[j + 1], dist));
 	}
 }
-
-void calculateNormals()
-{
-	// For every interior particle
-	for (unsigned int i = 1; i < gridSize - 1; i++)
-	{
-		for (unsigned int j = 1; j < gridSize - 1; j++)
-		{
-			int index = i * gridSize + j;
-			vmath::vec3 vertex = particles[index].pos;
-			// Axis neighbors
-			vmath::vec3 vertex1 = particles[index + 1].pos;
-			vmath::vec3 vertex2 = particles[index - 1].pos;
-			vmath::vec3 vertex3 = particles[index + gridSize].pos;
-			vmath::vec3 vertex4 = particles[index - gridSize].pos;
-			if (index % 2 == 0)
-			{
-				vmath::vec3 average = vmath::cross(vertex2 - vertex, vertex4 - vertex);
-				average += vmath::cross(vertex4 - vertex, vertex1 - vertex);
-				average += vmath::cross(vertex1 - vertex, vertex3 - vertex);
-				average += vmath::cross(vertex3 - vertex, vertex2 - vertex);
-				average /= 4;
-				particles[index].normal = vmath::normalize(average);
-			}
-			else
-			{
-
-			}
-		}
-	}
-}
-
 
 void update(float dt)
 {
