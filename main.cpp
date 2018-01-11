@@ -192,32 +192,32 @@ void generateClothPlane()
 
 void generateSprings(float dist)
 {
-	//We use this index to iterate through the list of springs
-	int index = 0;
-	float diagDist = sqrt(pow(dist, 2) + pow(dist, 2));
+	// The diagonal distance is longer than the edge distance (for squares it's sqrt(dist^2 + dist^2))
+	// Which is just sqrt2 * dist
+	float diagDist = sqrt(2) * dist;
 
-	// There are 4 springs per voxel
+	// Add left, top, and diagonals
 	unsigned int numQuads = gridSize - 1;
 	for (unsigned int i = 0; i < numQuads; i++)
 	{
 		for (unsigned int j = 0; j < numQuads; j++)
 		{
 			int topLeftIndex = i * gridSize + j;
-			int topRightIndex = (i + 1) * gridSize + j;
-			int bottomLeftIndex = i * gridSize + j + 1;
-			int bottomRightIndex = (i + 1) * gridSize + j + 1;
+			int topRightIndex = topLeftIndex + gridSize;
+			int bottomLeftIndex = topLeftIndex + 1;
+			int bottomRightIndex = topRightIndex + 1;
 			springs.push_back(Spring(&particles[topLeftIndex], &particles[topRightIndex], dist));
 			springs.push_back(Spring(&particles[topLeftIndex], &particles[bottomLeftIndex], dist));
 			springs.push_back(Spring(&particles[topRightIndex], &particles[bottomLeftIndex], diagDist));
 			springs.push_back(Spring(&particles[topLeftIndex], &particles[bottomRightIndex], diagDist));
 		}
 	}
-	// Fill in the far column
+	// Add the far right column
 	for (unsigned int i = numQuads; i < gridSize * numQuads; i += gridSize)
 	{
 		springs.push_back(Spring(&particles[i], &particles[i + gridSize], dist));
 	}
-	// Fill in the bottom row
+	// Add the bottom row
 	for (unsigned int j = numQuads * gridSize; j < numQuads * gridSize + numQuads; j++)
 	{
 		springs.push_back(Spring(&particles[j], &particles[j + 1], dist));
