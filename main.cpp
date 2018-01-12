@@ -196,31 +196,40 @@ void generateSprings(float dist)
 	// Which is just sqrt2 * dist
 	float diagDist = sqrt(2) * dist;
 
-	// Add left, top, and diagonals
-	unsigned int numQuads = gridSize - 1;
-	for (unsigned int i = 0; i < numQuads; i++)
+	// For every voxel add the diagonals
+	for (int x = 0; x < gridSize - 1; x++)
 	{
-		for (unsigned int j = 0; j < numQuads; j++)
+		for (int y = 0; y < gridSize - 1; y++)
 		{
-			int topLeftIndex = i * gridSize + j;
+			int topLeftIndex = x * gridSize + y;
 			int topRightIndex = topLeftIndex + gridSize;
-			int bottomLeftIndex = topLeftIndex + 1;
-			int bottomRightIndex = topRightIndex + 1;
-			springs.push_back(Spring(&particles[topLeftIndex], &particles[topRightIndex], dist));
-			springs.push_back(Spring(&particles[topLeftIndex], &particles[bottomLeftIndex], dist));
-			springs.push_back(Spring(&particles[topRightIndex], &particles[bottomLeftIndex], diagDist));
-			springs.push_back(Spring(&particles[topLeftIndex], &particles[bottomRightIndex], diagDist));
+			int botLeftIndex = topLeftIndex + 1;
+			int botRightIndex = topRightIndex + 1;
+			springs.push_back(Spring(&particles[topLeftIndex], &particles[botRightIndex], diagDist));
+			springs.push_back(Spring(&particles[topRightIndex], &particles[botLeftIndex], diagDist));
 		}
 	}
-	// Add the far right column
-	for (unsigned int i = numQuads; i < gridSize * numQuads; i += gridSize)
+	// For every column
+	for (int x = 0; x < gridSize; x++)
 	{
-		springs.push_back(Spring(&particles[i], &particles[i + gridSize], dist));
+		// For every row - 1
+		for (int y = 0; y < gridSize - 1; y++)
+		{
+			int topLeftIndex = y * gridSize + x;
+			int topRightIndex = topLeftIndex + gridSize;
+			springs.push_back(Spring(&particles[topLeftIndex], &particles[topRightIndex], dist));
+		}
 	}
-	// Add the bottom row
-	for (unsigned int j = numQuads * gridSize; j < numQuads * gridSize + numQuads; j++)
+	// For every row
+	for (int y = 0; y < gridSize; y++)
 	{
-		springs.push_back(Spring(&particles[j], &particles[j + 1], dist));
+		// For every column -1 
+		for (int x = 0; x < gridSize - 1; x++)
+		{
+			int botLeftIndex = y * gridSize + x;
+			int botRightIndex = botLeftIndex + 1;
+			springs.push_back(Spring(&particles[botLeftIndex], &particles[botRightIndex], dist));
+		}
 	}
 }
 
@@ -376,8 +385,8 @@ void displayFunc()
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, &lightDiffuse[0]);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, &lightSpecular[0]);
 	glLightfv(GL_LIGHT0, GL_POSITION, vmath::normalize(vmath::vec4(0.0f, 15.0f, 0.0f, 1.0f)));
-	//glShadeModel(GL_FLAT);
-	glShadeModel(GL_SMOOTH);
+	glShadeModel(GL_FLAT);
+	//glShadeModel(GL_SMOOTH);
 
 	// Begin drawing
 	glMatrixMode(GL_PROJECTION);
@@ -411,6 +420,7 @@ void displayFunc()
 	}
 	glEnd();
 
+	glShadeModel(GL_SMOOTH);
 	glMaterialfv(GL_FRONT, GL_AMBIENT, &sphereMatAmbient[0]);
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, &sphereMatDiffuse[0]);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, &sphereMatSpecular[0]);
@@ -419,18 +429,18 @@ void displayFunc()
 	glutSolidSphere(radius, 20, 20);
 
 	// Draw the springs
-	//glDisable(GL_LIGHTING);
-	//glColor3f(1.0f, 0.0f, 0.0f);
-	//glBegin(GL_LINES);
-	//for (unsigned int i = 0; i < springs.size(); i++)
-	//{
-	//	vmath::vec3 v1 = springs[i].p1->pos;
-	//	vmath::vec3 v2 = springs[i].p2->pos;
-	//	glVertex3f(v1[0], v1[1], v1[2]);
-	//	glVertex3f(v2[0], v2[1], v2[2]);
-	//}
-	//glEnd();
-	//glEnable(GL_LIGHTING);
+	/*glDisable(GL_LIGHTING);
+	glColor3f(1.0f, 0.0f, 0.0f);
+	glBegin(GL_LINES);
+	for (unsigned int i = 0; i < springs.size(); i++)
+	{
+		vmath::vec3 v1 = springs[i].p1->pos;
+		vmath::vec3 v2 = springs[i].p2->pos;
+		glVertex3f(v1[0], v1[1], v1[2]);
+		glVertex3f(v2[0], v2[1], v2[2]);
+	}
+	glEnd();
+	glEnable(GL_LIGHTING);*/
 
 	// Draw ground plane
 	/*glMaterialfv(GL_FRONT, GL_AMBIENT, &planeMatAmbient[0]);
