@@ -1,8 +1,9 @@
-#include "Spring.h"
-#include "Particle.h"
-#include "vmath.h"
+// Just a simple spring mass cloth demo with minimal code for easy reading/reference
 #include "Camera.h"
-
+#include "Face.h"
+#include "Particle.h"
+#include "Spring.h"
+#include "vmath.h"
 #include <GL\freeglut.h>
 #include <GL\GLU.h>
 #include <math.h>
@@ -43,7 +44,7 @@ vmath::vec4 sphereMatSpecular;
 
 std::vector<Particle> particles;
 std::vector<Spring> springs;
-std::vector<unsigned int> indices;
+std::vector<Face> faces;
 unsigned int gridSize = 41;
 vmath::vec4 matAmbient;
 vmath::vec4 matDiffuse;
@@ -63,14 +64,15 @@ int main(int argc, char** argv)
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
 	
-	glutInitWindowSize(1920, 1080);
+	glutInitWindowSize(static_cast<int>(1920.0 * 0.75), 
+		static_cast<int>(1080.0 * 0.75));
 	glutCreateWindow("Animate");
 	glutCreateMenu(NULL);
 	glEnable(GL_DEPTH_TEST);
 	//glEnable(GL_CULL_FACE);
 	glEnable(GL_NORMALIZE);
 	glDepthFunc(GL_LEQUAL);
-	glutFullScreen();
+	//glutFullScreen();
 
 	// Set GLUT event callbacks
 	glutMouseFunc(onMouseFunc);
@@ -128,12 +130,11 @@ void init()
 
 void generateClothPlane()
 {
-	// Create the grid of vertices
 	float halfSize = gridSize * 0.5f;
 	particles.resize(gridSize * gridSize);
 	int index = 0;
 	float density = 0.4f;
-	// Generate a triangle plane for drawing
+	// Generate a bunch of particles in a plane
 	for (unsigned int i = 0; i < gridSize; i++)
 	{
 		for (unsigned int j = 0; j < gridSize; j++)
@@ -157,34 +158,43 @@ void generateClothPlane()
 
 	generateSprings(density);
 
-	// Setup indices
-	indices.resize(6 * gridSize * gridSize);
+	// We use a an alternating [/][\] triangle setup
+	faces.reserve(2 * gridSize * gridSize);
 	index = 0;
 	for (unsigned int i = 0; i < gridSize - 1; i++)
 	{
 		for (unsigned int j = 0; j < gridSize - 1; j++)
 		{
-			// Generate [/] voxel
-			if ((i * gridSize + j) % 2 == 0)
-			{
-				indices[index++] = i * gridSize + j;
-				indices[index++] = i * gridSize + j + 1;
-				indices[index++] = (i + 1) * gridSize + j;
+			unsigned int index1 = i * gridSize + j;
+			unsigned int index2 = index1 + 1;
+			unsigned int index3 = index1 + gridSize;
+			unsigned int index4 = index1 + gridSize + 1;
 
-				indices[index++] = (i + 1) * gridSize + j;
-				indices[index++] = i * gridSize + j + 1;
-				indices[index++] = (i + 1) * gridSize + j + 1;
+			// Exlusive or for alternating pattern
+			if ((i % 2) ^ (j % 2))
+			{
+				faces.push_back(Face(&particles[index1], &particles[index2], &particles[index3]));
+				particles[index1].faces.push_back(faces.back());
+				particles[index2].faces.push_back(faces.back());
+				particles[index3].faces.push_back(faces.back());
+
+				faces.push_back(Face(&particles[index3], &particles[index2], &particles[index4]));
+				particles[index3].faces.push_back(faces.back());
+				particles[index2].faces.push_back(faces.back());
+				particles[index4].faces.push_back(faces.back());
 			}
-			// Generate [\] voxel
+			// Generate [\] triangle indices
 			else
 			{
-				indices[index++] = i * gridSize + j + 1;
-				indices[index++] = (i + 1) * gridSize + j + 1;
-				indices[index++] = i * gridSize + j;
+				faces.push_back(Face(&particles[index2], &particles[index4], &particles[index1]));
+				particles[index2].faces.push_back(faces.back());
+				particles[index4].faces.push_back(faces.back());
+				particles[index1].faces.push_back(faces.back());
 
-				indices[index++] = i * gridSize + j;
-				indices[index++] = (i + 1) * gridSize + j + 1;
-				indices[index++] = (i + 1) * gridSize + j;
+				faces.push_back(Face(&particles[index1], &particles[index4], &particles[index3]));
+				particles[index1].faces.push_back(faces.back());
+				particles[index4].faces.push_back(faces.back());
+				particles[index3].faces.push_back(faces.back());
 			}
 		}
 	}
@@ -194,12 +204,12 @@ void generateSprings(float dist)
 {
 	// The diagonal distance is longer than the edge distance (for squares it's sqrt(dist^2 + dist^2))
 	// Which is just sqrt2 * dist
-	float diagDist = sqrt(2) * dist;
+	float diagDist = sqrt(2.0f) * dist;
 
-	// For every voxel add the diagonals
-	for (int x = 0; x < gridSize - 1; x++)
+	// Add the diagonal springs
+	for (unsigned int x = 0; x < gridSize - 1; x++)
 	{
-		for (int y = 0; y < gridSize - 1; y++)
+		for (unsigned int y = 0; y < gridSize - 1; y++)
 		{
 			int topLeftIndex = x * gridSize + y;
 			int topRightIndex = topLeftIndex + gridSize;
@@ -209,22 +219,22 @@ void generateSprings(float dist)
 			springs.push_back(Spring(&particles[topRightIndex], &particles[botLeftIndex], diagDist));
 		}
 	}
-	// For every column
-	for (int x = 0; x < gridSize; x++)
+	// Add the vertical springs
+	for (unsigned int x = 0; x < gridSize; x++)
 	{
 		// For every row - 1
-		for (int y = 0; y < gridSize - 1; y++)
+		for (unsigned int y = 0; y < gridSize - 1; y++)
 		{
 			int topLeftIndex = y * gridSize + x;
 			int topRightIndex = topLeftIndex + gridSize;
 			springs.push_back(Spring(&particles[topLeftIndex], &particles[topRightIndex], dist));
 		}
 	}
-	// For every row
-	for (int y = 0; y < gridSize; y++)
+	// Add the horizontal springs
+	for (unsigned int y = 0; y < gridSize; y++)
 	{
 		// For every column -1 
-		for (int x = 0; x < gridSize - 1; x++)
+		for (unsigned int x = 0; x < gridSize - 1; x++)
 		{
 			int botLeftIndex = y * gridSize + x;
 			int botRightIndex = botLeftIndex + 1;
@@ -243,24 +253,25 @@ void update(float dt)
 		springs[i].applySpringForce();
 	}
 
-	// Particle collision with sphere (Could do triangles instead)
+	// Particle collision with sphere (Triangle collision would be better)
 	for (unsigned int i = 0; i < particles.size(); i++)
 	{
+		Particle& p = particles[i];
 		// Distance between particle and sphere
-		vmath::vec3 dist = particles[i].pos - spherePos;
+		vmath::vec3 dist = p.pos - spherePos;
 		// If the distance is less than the radius of the sphere then they're touching
-		if (vmath::length(dist) < (radius + 0.2))
+		if (vmath::length(dist) < (radius + 0.2f))
 		{
 			// Collision resolution
 			vmath::vec3 dir = vmath::normalize(dist);
-			vmath::vec3 pos = dir * (radius + 0.2) + spherePos;
-			particles[i].pos = pos;
+			vmath::vec3 pos = dir * (radius + 0.2f) + spherePos;
+			p.pos = pos;
 
 			// Handle velocity (completely inelastic)
 			// Remove velocity pointing into the sphere
-			float l = vmath::dot(dir, particles[i].velocity);
+			float l = vmath::dot(dir, p.velocity);
 			if (l < 0.01)
-				particles[i].velocity = particles[i].velocity - (l * dir);
+				p.velocity = p.velocity - (l * dir);
 		}
 	}
 
@@ -269,8 +280,14 @@ void update(float dt)
 	{
 		// Apply gravity
 		particles[i].applyForce(vmath::vec3(0.0f, -0.25f, 0.0f));
+		// Then integrate
+		particles[i].integrate(0.05f);
+	}
 
-		particles[i].integrate(dt * 5.0f);
+	// Update the normals
+	for (unsigned int i = 0; i < particles.size(); i++)
+	{
+		particles[i].updateNormal();
 	}
 }
 
@@ -367,17 +384,17 @@ void displayFunc()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Set the draw information and lightss
-	if (shadeMode == 2)
+	if (shadeMode == 3)
 	{
 		glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
 		glPointSize(6.0f); // Just the triangle points
 	}
-	else if (shadeMode == 1)
+	else if (shadeMode == 2)
 	{
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		glLineWidth(2.0f); // For wireframe triangles
 	}
-	else
+	else // 0, 1 are flat and smooth shading modes
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // For filled triangles
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
@@ -385,8 +402,10 @@ void displayFunc()
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, &lightDiffuse[0]);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, &lightSpecular[0]);
 	glLightfv(GL_LIGHT0, GL_POSITION, vmath::normalize(vmath::vec4(0.0f, 15.0f, 0.0f, 1.0f)));
-	glShadeModel(GL_FLAT);
-	//glShadeModel(GL_SMOOTH);
+	if (shadeMode == 0)
+		glShadeModel(GL_SMOOTH);
+	else
+		glShadeModel(GL_FLAT);
 
 	// Begin drawing
 	glMatrixMode(GL_PROJECTION);
@@ -403,24 +422,40 @@ void displayFunc()
 	glMaterialfv(GL_FRONT, GL_SPECULAR, &matSpecular[0]);
 	glMaterialf(GL_FRONT, GL_SHININESS, matSpecular[3]);
 	glBegin(GL_TRIANGLES);
-	for (int i = 0; i < indices.size(); i += 3)
+	if (shadeMode == 0)
 	{
-		vmath::vec3 vertex1 = particles[indices[i]].pos;
-		vmath::vec3 vertex2 = particles[indices[i + 1]].pos;
-		vmath::vec3 vertex3 = particles[indices[i + 2]].pos;
-		// Flat normals
-		vmath::vec3 normal = vmath::normalize(vmath::cross(vertex2 - vertex1, vertex3 - vertex1));
-
-		glVertex3f(vertex1[0], vertex1[1], vertex1[2]);
-		glNormal3f(normal[0], normal[1], normal[2]);
-		glVertex3f(vertex2[0], vertex2[1], vertex2[2]);
-		//glNormal3f(normal[0], normal[1], normal[2]);
-		glVertex3f(vertex3[0], vertex3[1], vertex3[2]);
-		//glNormal3f(normal[0], normal[1], normal[2]);
+		for (unsigned int i = 0; i < faces.size(); i++)
+		{
+			Particle* p1 = faces[i].p1;
+			Particle* p2 = faces[i].p2;
+			Particle* p3 = faces[i].p3;
+			// Smooth normals
+			glNormal3f(p1->normal[0], p1->normal[1], p1->normal[2]);
+			glVertex3f(p1->pos[0], p1->pos[1], p1->pos[2]);
+			glNormal3f(p2->normal[0], p2->normal[1], p2->normal[2]);
+			glVertex3f(p2->pos[0], p2->pos[1], p2->pos[2]);
+			glNormal3f(p3->normal[0], p3->normal[1], p3->normal[2]);
+			glVertex3f(p3->pos[0], p3->pos[1], p3->pos[2]);
+		}
+	}
+	else
+	{
+		for (unsigned int i = 0; i < faces.size(); i++)
+		{
+			Particle* p1 = faces[i].p1;
+			Particle* p2 = faces[i].p2;
+			Particle* p3 = faces[i].p3;
+			// Flat normals
+			vmath::vec3 normal = vmath::normalize(vmath::cross(p2->pos - p1->pos, p3->pos - p1->pos));
+			glNormal3f(normal[0], normal[1], normal[2]);
+			glVertex3f(p1->pos[0], p1->pos[1], p1->pos[2]);
+			glVertex3f(p2->pos[0], p2->pos[1], p2->pos[2]);
+			glVertex3f(p3->pos[0], p3->pos[1], p3->pos[2]);
+		}
 	}
 	glEnd();
 
-	glShadeModel(GL_SMOOTH);
+	//glShadeModel(GL_SMOOTH);
 	glMaterialfv(GL_FRONT, GL_AMBIENT, &sphereMatAmbient[0]);
 	glMaterialfv(GL_FRONT, GL_DIFFUSE, &sphereMatDiffuse[0]);
 	glMaterialfv(GL_FRONT, GL_SPECULAR, &sphereMatSpecular[0]);
