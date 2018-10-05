@@ -1,8 +1,8 @@
 #pragma once
-#include "Face.h"
 #include "vmath.h"
 #include <vector>
 
+class Face;
 class Spring;
 
 class Particle
@@ -29,5 +29,5 @@ public:
 	vmath::vec3 velocity = vmath::vec3(0.0f);
 
 	std::vector<Spring*> springs;
-	std::vector<Face> faces;
+	std::vector<Face*> faces;
 };

@@ -174,27 +174,27 @@ void generateClothPlane()
 			if ((i % 2) ^ (j % 2))
 			{
 				faces.push_back(Face(&particles[index1], &particles[index2], &particles[index3]));
-				particles[index1].faces.push_back(faces.back());
-				particles[index2].faces.push_back(faces.back());
-				particles[index3].faces.push_back(faces.back());
+				particles[index1].faces.push_back(&faces.back());
+				particles[index2].faces.push_back(&faces.back());
+				particles[index3].faces.push_back(&faces.back());
 
 				faces.push_back(Face(&particles[index3], &particles[index2], &particles[index4]));
-				particles[index3].faces.push_back(faces.back());
-				particles[index2].faces.push_back(faces.back());
-				particles[index4].faces.push_back(faces.back());
+				particles[index3].faces.push_back(&faces.back());
+				particles[index2].faces.push_back(&faces.back());
+				particles[index4].faces.push_back(&faces.back());
 			}
 			// Generate [\] triangle indices
 			else
 			{
 				faces.push_back(Face(&particles[index2], &particles[index4], &particles[index1]));
-				particles[index2].faces.push_back(faces.back());
-				particles[index4].faces.push_back(faces.back());
-				particles[index1].faces.push_back(faces.back());
+				particles[index2].faces.push_back(&faces.back());
+				particles[index4].faces.push_back(&faces.back());
+				particles[index1].faces.push_back(&faces.back());
 
 				faces.push_back(Face(&particles[index1], &particles[index4], &particles[index3]));
-				particles[index1].faces.push_back(faces.back());
-				particles[index4].faces.push_back(faces.back());
-				particles[index3].faces.push_back(faces.back());
+				particles[index1].faces.push_back(&faces.back());
+				particles[index4].faces.push_back(&faces.back());
+				particles[index3].faces.push_back(&faces.back());
 			}
 		}
 	}

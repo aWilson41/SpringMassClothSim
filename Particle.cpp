@@ -1,3 +1,4 @@
+#include "Face.h"
 #include "Particle.h"
 #include "Spring.h"
 
@@ -17,9 +18,8 @@ void Particle::updateNormal()
 	// For every face
 	for (int i = 0; i < faces.size(); i++)
 	{
-		sum += vmath::normalize(vmath::cross(
-			faces[i].p2->pos - faces[i].p1->pos, 
-			faces[i].p3->pos - faces[i].p1->pos));
+		Face& f = *faces[i];
+		sum += vmath::normalize(vmath::cross(f.p2->pos - f.p1->pos, f.p3->pos - f.p1->pos));
 	}
 	normal = vmath::normalize(sum);
 }
