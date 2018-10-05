@@ -68,8 +68,10 @@ int main(int argc, char** argv)
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
 	
-	glutInitWindowSize(static_cast<int>(1920.0 * 0.75), 
-		static_cast<int>(1080.0 * 0.75));
+	float scale = 0.75f;
+	// float scale = 1.0f;
+	glutInitWindowSize(static_cast<int>(1920.0 * scale),
+		static_cast<int>(1080.0 * scale));
 	glutCreateWindow("Animate");
 	glutCreateMenu(NULL);
 	glEnable(GL_DEPTH_TEST);
