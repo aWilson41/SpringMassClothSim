@@ -1,4 +1,7 @@
-// Just a simple spring mass cloth demo with minimal code for easy reading/reference
+// Just a simple spring mass cloth demo with minimal code restrained to a single main for easy reading/reference
+// A- toggle through smooth, flat, wireframes, and points
+// Enter- start/stop
+// l, j, k, i- Move the sphere
 #include "Camera.h"
 #include "Face.h"
 #include "Particle.h"
@@ -34,6 +37,7 @@ float rho = 30.0f;
 
 int previousTime = 0;
 int shadeMode = 0;
+bool running = false;
 
 vmath::vec3 spherePos;
 float radius = 2.0f;
@@ -247,6 +251,9 @@ void update(float dt)
 {
 	updateCamera(dt);
 
+	if (!running)
+		return;
+
 	// Apply forces from springs
 	for (unsigned int i = 0; i < springs.size(); i++)
 	{
@@ -366,6 +373,14 @@ void onKeyPress(unsigned char key, int x, int y)
 		break;
 	case'j':
 		spherePos[0] -= 0.1f;
+		break;
+	case 'i':
+		spherePos[1] += 0.1f;
+		break;
+	case 'k':
+		spherePos[1] -= 0.1f;
+	case '\r':
+		running = !running;
 		break;
 	case 27:
 		exit(0);
